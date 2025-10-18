@@ -1,0 +1,243 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct pasajero {
+    char genero[15];
+    char apellido[50];
+    struct pasajero *ant;
+    struct pasajero *sig;
+} pasajero;
+
+pasajero *cab = NULL;
+int capacidad_maxima = 0;
+int tiquetes_vendidos = 0;
+int abordaje_iniciado = 0;
+
+void establecer_capacidad();
+void vender_tiquete();
+void iniciar_abordaje();
+void ver_abordados();
+void ver_no_abordados();
+int contar_pasajeros();
+void liberar_lista();
+
+int main() {
+    int opc;
+    
+    do {
+        printf("   SISTEMA DE TIQUETES DE AVION\n");
+        printf("1. Establecer Capacidad\n");
+        printf("2. Vender Tiquete\n");
+        printf("3. Iniciar Abordaje\n");
+        printf("4. Ver Abordados\n");
+        printf("5. Ver No Abordados\n");
+        printf("6. Salir\n");
+        printf("Seleccione una opcion: ");
+        scanf("%d", &opc);
+        getchar();
+        
+        switch (opc) {
+            case 1:
+                establecer_capacidad();
+                break;
+            case 2:
+                vender_tiquete();
+                break;
+            case 3:
+                iniciar_abordaje();
+                break;
+            case 4:
+                ver_abordados();
+                break;
+            case 5:
+                ver_no_abordados();
+                break;
+            case 6:
+                liberar_lista();
+                printf("\nGracias por usar el sistema. Adios!\n");
+                break;
+            default:
+                printf("\nOpcion invalida. Intente nuevamente.\n");
+        }
+    } while(opc != 6);
+    
+    return 0;
+}
+
+void establecer_capacidad() {
+    if (capacidad_maxima > 0) {
+        printf("\nLa capacidad ya fue establecida en: %d pasajeros\n", capacidad_maxima);
+        return;
+    }
+    
+    printf("\nIngrese la capacidad maxima del avion: ");
+    scanf("%d", &capacidad_maxima);
+    
+    if (capacidad_maxima <= 0) {
+        printf("Error: La capacidad debe ser mayor a 0\n");
+        capacidad_maxima = 0;
+        return;
+    }
+    
+    printf("Capacidad establecida exitosamente: %d pasajeros\n", capacidad_maxima);
+}
+
+void vender_tiquete() {
+    if (capacidad_maxima == 0) {
+        printf("\nError: Primero debe establecer la capacidad del avion\n");
+        return;
+    }
+    
+    if (abordaje_iniciado) {
+        printf("\nError: No se pueden vender tiquetes adicionales. El abordaje ya inicio.\n");
+        return;
+    }
+    
+    int sobreventa_limite = capacidad_maxima + (capacidad_maxima * 10 / 100);
+    
+    if (tiquetes_vendidos >= sobreventa_limite) {
+        printf("\nNo se pueden vender mas tiquetes. Limite de sobreventa alcanzado (%d/%d)\n", 
+               tiquetes_vendidos, sobreventa_limite);
+        return;
+    }
+    
+    pasajero *nuevo = (pasajero *) malloc(sizeof(pasajero));
+    if (nuevo == NULL) {
+        printf("\nError: No se pudo asignar memoria\n");
+        return;
+    }
+    
+    printf("\n--- REGISTRO DE PASAJERO ---\n");
+    
+    printf("Genero (Femenino/Masculino/No Binario): ");
+    fgets(nuevo->genero, 15, stdin);
+    nuevo->genero[strcspn(nuevo->genero, "\n")] = 0;
+    
+    printf("Primer Apellido: ");
+    fgets(nuevo->apellido, 50, stdin);
+    nuevo->apellido[strcspn(nuevo->apellido, "\n")] = 0;
+    
+    nuevo->ant = NULL;
+    nuevo->sig = cab;
+    
+    if (cab != NULL) {
+        cab->ant = nuevo;
+    }
+    
+    cab = nuevo;
+    tiquetes_vendidos++;
+    
+    printf("\nTiquete vendido exitosamente!\n");
+    printf("Pasajero: %s\n", nuevo->apellido);
+    printf("Genero: %s\n", nuevo->genero);
+    printf("Total de tiquetes vendidos: %d/%d\n", tiquetes_vendidos, sobreventa_limite);
+}
+
+void iniciar_abordaje() {
+    if (capacidad_maxima == 0) {
+        printf("\nError: Primero debe establecer la capacidad del avion\n");
+        return;
+    }
+    
+    if (tiquetes_vendidos == 0) {
+        printf("\nNo hay pasajeros para abordar\n");
+        return;
+    }
+    
+    printf("\n=== INICIANDO PROCESO DE ABORDAJE ===\n");
+    printf("Capacidad del avion: %d pasajeros\n", capacidad_maxima);
+    printf("Tiquetes vendidos: %d\n", tiquetes_vendidos);
+    
+    pasajero *actual = cab;
+    int abordados = 0;
+    int posicion = 1;
+    
+    while (actual != NULL && abordados < capacidad_maxima) {
+        printf("\nAbordando pasajero #%d: %s (%s)\n", 
+               posicion, actual->apellido, actual->genero);
+        abordados++;
+        posicion++;
+        actual = actual->sig;
+    }
+    
+    abordaje_iniciado = 1;
+    
+    printf("\n--- ABORDAJE COMPLETADO ---\n");
+    printf("Pasajeros que abordaron: %d\n", abordados);
+    printf("Pasajeros que NO pudieron abordar: %d\n", tiquetes_vendidos - abordados);
+    printf("\nLa venta de tiquetes ha sido DESHABILITADA.\n");
+}
+
+void ver_abordados() {
+    if (!abordaje_iniciado) {
+        printf("\nEl abordaje aun no ha iniciado\n");
+        return;
+    }
+    
+    if (cab == NULL) {
+        printf("\nNo hay pasajeros registrados\n");
+        return;
+    }
+    
+    printf("\n=== LISTA DE PASAJEROS ABORDADOS ===\n");
+    printf("%-5s %-30s %-15s\n", "No.", "Apellido", "Genero");
+    printf("--------------------------------------------------\n");
+    
+    pasajero *actual = cab;
+    int contador = 1;
+    
+    while (actual != NULL && contador <= capacidad_maxima) {
+        printf("%-5d %-30s %-15s\n", contador, actual->apellido, actual->genero);
+        contador++;
+        actual = actual->sig;
+    }
+    
+    printf("--------------------------------------------------\n");
+    printf("Total abordados: %d\n", contador - 1);
+}
+
+void ver_no_abordados() {
+    if (!abordaje_iniciado) {
+        printf("\nEl abordaje aun no ha iniciado\n");
+        return;
+    }
+    
+    if (tiquetes_vendidos <= capacidad_maxima) {
+        printf("\nTodos los pasajeros lograron abordar\n");
+        return;
+    }
+    
+    printf("\n=== LISTA DE PASAJEROS QUE NO ABORDARON ===\n");
+    printf("%-5s %-30s %-15s\n", "No.", "Apellido", "Genero");
+    printf("--------------------------------------------------\n");
+    
+    pasajero *actual = cab;
+    int posicion = 1;
+    int no_abordados = 0;
+    
+    while (actual != NULL) {
+        if (posicion > capacidad_maxima) {
+            printf("%-5d %-30s %-15s\n", no_abordados + 1, actual->apellido, actual->genero);
+            no_abordados++;
+        }
+        posicion++;
+        actual = actual->sig;
+    }
+    
+    printf("--------------------------------------------------\n");
+    printf("Total no abordados: %d\n", no_abordados);
+}
+
+void liberar_lista() {
+    pasajero *actual = cab;
+    pasajero *siguiente;
+    
+    while (actual != NULL) {
+        siguiente = actual->sig;
+        free(actual);
+        actual = siguiente;
+    }
+    
+    cab = NULL;
+}
